@@ -17,7 +17,7 @@ def crc16_ccitt_false(data: str) -> str:
 def build_fps_qr(
     fps_id: str,
     merchant_name: str,
-    ref_number: str | None = None,
+    bill_number: str | None = None,
     amount: float | None = None,
 ) -> str:
     # 1. Tag 26: FPS Account Information
@@ -51,12 +51,14 @@ def build_fps_qr(
 
     payload_parts.extend(["5802HK", id_59, "6002HK"])
 
-    # Reference Label (Tag 62) — optional. Note: confirmed via testing that
-    # HSBC HK's scan-to-pay rejects any QR containing this field, even
-    # though it's spec-compliant and accepted by HKICL's own validator app.
-    if ref_number:
-        clean_ref = ref_number[:25]
-        sub_62 = f"05{len(clean_ref.encode('utf-8')):02d}{clean_ref}"
+    # Bill Number (Tag 62, sub-01) — optional. Note: confirmed via testing
+    # that HSBC HK's scan-to-pay rejects any QR containing this field while
+    # Business Collect merchant registration is still pending on the
+    # receiving account, even though it's spec-compliant and accepted by
+    # HKICL's own validator app.
+    if bill_number:
+        clean_bill = bill_number[:25]
+        sub_62 = f"01{len(clean_bill.encode('utf-8')):02d}{clean_bill}"
         id_62 = f"62{len(sub_62.encode('utf-8')):02d}{sub_62}"
         payload_parts.append(id_62)
 

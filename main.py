@@ -5,7 +5,7 @@ from fps_qr import build_fps_qr, generate_qr_image
 payload_string = build_fps_qr(
     fps_id="109020248",
     merchant_name="Stanford Swim School HK",
-    ref_number="July swim fees",
+    bill_number="July swim fees",
     amount=10.00,  # Leave None for Static QR (Recommended for general FPS)
 )
 
