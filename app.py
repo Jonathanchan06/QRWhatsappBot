@@ -13,7 +13,7 @@ app = Flask(__name__)
 # http:// connection. Twilio refuses to fetch media over plain http.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
-FPS_ID = "109020248"
+FPS_ID = "116566704"
 MERCHANT_NAME = "Stanford Swim School HK"
 
 # Per-sender conversation state, e.g. {"state": "AWAITING_MESSAGE", "amount": 10.0}
