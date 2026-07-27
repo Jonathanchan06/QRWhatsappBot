@@ -41,13 +41,8 @@ def whatsapp_webhook():
         msg.body("Cancelled. Send any message to start a new QR request.")
         return str(resp)
 
-    session = SESSIONS.setdefault(key, {"state": "IDLE"})
+    session = SESSIONS.setdefault(key, {"state": "AWAITING_AMOUNT"})
     state = session["state"]
-
-    if state == "IDLE":
-        session["state"] = "AWAITING_AMOUNT"
-        msg.body("How much would you like to charge? (e.g. 10.00)")
-        return str(resp)
 
     if state == "AWAITING_AMOUNT":
         try:
