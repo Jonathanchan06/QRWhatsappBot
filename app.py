@@ -69,15 +69,10 @@ def whatsapp_webhook():
             return str(resp)
 
         amount = session["amount"]
-        # Note: bill_number is intentionally not passed here — HSBC HK's
-        # scan-to-pay rejects any QR containing Tag 62 while Business
-        # Collect registration is pending on the account (confirmed via
-        # testing), even though it's spec-compliant. The message is still
-        # shown in the reply text below, just not embedded in the QR itself.
-        # Once registration completes, pass bill_number=body here.
         payload = build_fps_qr(
             fps_id=FPS_ID,
             merchant_name=MERCHANT_NAME,
+            bill_number=body,
             amount=amount,
         )
 
