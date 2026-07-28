@@ -139,19 +139,16 @@ The chatbot uses the **Twilio WhatsApp Sandbox**, which is free indefinitely for
 
 ### Using it
 
-Send a single message in this fixed format — class type, name, and phone on the first three lines, followed by the pricing details. The amount charged is always the value from the **last** `=$X` calculation found in the pricing text (so a discounted price after a markdown works correctly):
+Send a single message in this fixed format: `<classtype>-<name>-<phone>-<amount>`
 
 ```
-You:  SG
-      JohnWong
-      91234567
-      原價：$348/堂x51堂=$17748
-      優惠價
-      $17748-$2295=$15453 (51堂)
+You:  SG-JohnWong-91234567-15453
 
 Bot:  Here's your FPS QR for HKD 15453.00 — JohnWong
       [QR code image]
 ```
+
+Note: none of `classtype`, `name`, or `phone` can contain a hyphen themselves, since the message is split into exactly 4 parts on `-`.
 
 The merchant identity (FPS ID and merchant name, set at the top of `app.py`) is fixed. Every request is logged to Google Sheets (see below); if the same phone number + name sends another request while the previous one is still unpaid, the old row is automatically marked `Cancelled` and the new one becomes the active entry — already-`Paid` rows are never touched.
 
