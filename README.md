@@ -114,7 +114,9 @@ The payload ends with a **CRC-16/CCITT-FALSE** checksum calculated across the en
 
 ## 5. Project Structure
 
-* **`fps_qr.py`** — Core payload/QR generation logic (`build_fps_qr`, `generate_qr_image`, `crc16_ccitt_false`). The reference/message field (Tag 62) is a **required** argument, so every generated code carries a predetermined payee message rather than leaving it for the payer's banking app to prompt for.
+* **`fps_qr.py`** — Core payload/QR generation logic (`build_fps_qr`, `generate_qr_image`, `crc16_ccitt_false`).
+* **`message_parser.py`** — Parses the fixed-format WhatsApp request message into class type, name, phone, and amount.
+* **`sheets_logger.py`** — Logs every generated QR to Google Sheets, auto-cancelling any prior unpaid entry for the same customer.
 * **`main.py`** — Minimal manual example: generates a single QR PNG to disk using a hardcoded amount and message. Useful for quick one-off testing without WhatsApp.
 * **`app.py`** — Flask webhook server that turns QR generation into a WhatsApp chatbot (see below).
 
@@ -128,6 +130,7 @@ The chatbot uses the **Twilio WhatsApp Sandbox**, which is free indefinitely for
 1. Install dependencies: `pip install -r requirements.txt`
 2. Create a free [Twilio account](https://www.twilio.com/try-twilio) and open the **WhatsApp Sandbox** page in the Twilio Console (Messaging → Try it out → Send a WhatsApp message).
 3. From your own WhatsApp, send the sandbox's "join `<your-code>`" message to the sandbox number shown in the console. This links your number to the sandbox.
+4. Set `TWILIO_AUTH_TOKEN` (from the Twilio Console) as an environment variable — the webhook rejects any request that isn't validly signed by Twilio.
 
 ### Running locally
 1. Start the Flask server: `python app.py` (listens on port 5000).
@@ -135,18 +138,37 @@ The chatbot uses the **Twilio WhatsApp Sandbox**, which is free indefinitely for
 3. In the Twilio Console's Sandbox settings, set "WHEN A MESSAGE COMES IN" to `https://<your-ngrok-domain>/whatsapp` (method: `HTTP POST`), then save.
 
 ### Using it
-Message the sandbox number from your WhatsApp:
+
+Send a single message in this fixed format — class type, name, and phone on the first three lines, followed by the pricing details. The amount charged is always the value from the **last** `=$X` calculation found in the pricing text (so a discounted price after a markdown works correctly):
 
 ```
-You:  hi
-Bot:  How much would you like to charge? (e.g. 10.00)
-You:  10.00
-Bot:  What's the payee message / reference for this payment?
-You:  July swim fees
-Bot:  Here's your FPS QR for HKD 10.00 — July swim fees
+You:  SG
+      JohnWong
+      91234567
+      原價：$348/堂x51堂=$17748
+      優惠價
+      $17748-$2295=$15453 (51堂)
+
+Bot:  Here's your FPS QR for HKD 15453.00 — JohnWong
       [QR code image]
 ```
 
-The merchant identity (FPS ID and merchant name, set at the top of `app.py`) is fixed — only the amount and payee message vary per request. Send `cancel` at any point to reset the conversation.
+The merchant identity (FPS ID and merchant name, set at the top of `app.py`) is fixed. Every request is logged to Google Sheets (see below); if the same phone number + name sends another request while the previous one is still unpaid, the old row is automatically marked `Cancelled` and the new one becomes the active entry — already-`Paid` rows are never touched.
 
-**Note:** Conversation state and generated QR images are kept in memory per WhatsApp number, so restarting `app.py` clears any in-progress conversations.
+**Note:** Generated QR images are kept in memory per WhatsApp number, so restarting `app.py` clears any not-yet-fetched images (the permanent record lives in the Google Sheet instead).
+
+---
+
+## 7. Google Sheets Logging Setup
+
+Every generated QR is logged to a Google Sheet with columns `Timestamp | ClassType | Name | Phone | Amount | BillNumber | QRPayload | Status`. Setup uses a Google **service account** (no interactive login needed on the server side):
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), create (or select) a project, then enable the **Google Sheets API** (APIs & Services → Library → search "Google Sheets API" → Enable).
+2. Go to **APIs & Services → Credentials → Create Credentials → Service Account**. Give it any name, no special roles needed.
+3. Open the new service account → **Keys** tab → **Add Key → Create new key → JSON**. This downloads a `.json` file — treat it like a password, never commit it to git.
+4. Create a Google Sheet with a header row: `Timestamp | ClassType | Name | Phone | Amount | BillNumber | QRPayload | Status`. Click **Share**, and share it with the service account's email address (found inside the JSON file, looks like `something@your-project.iam.gserviceaccount.com`) as **Editor**.
+5. Set these environment variables (locally in a `.env`, or on your hosting platform's dashboard — never committed to the repo):
+   - `GOOGLE_SERVICE_ACCOUNT_JSON` — the **entire contents** of the downloaded JSON file, pasted as one value.
+   - `SHEET_ID` — the long ID in the sheet's URL: `docs.google.com/spreadsheets/d/`**`THIS_PART`**`/edit`.
+
+If the Sheets API call fails for any reason (missing credentials, network issue, etc.), the bot still generates and sends the QR — it just adds a warning to the reply telling you to log that entry manually.
