@@ -73,7 +73,8 @@ def whatsapp_webhook():
         sheets_logger.log_request(
             parsed.class_type, parsed.name, parsed.phone, parsed.amount, bill_number, payload
         )
-    except Exception:
+    except Exception as e:
+        app.logger.error("sheets_logger.log_request failed: %r", e)
         warning = "\n\n⚠️ Not logged to the spreadsheet — please add this row manually."
 
     qr_url = request.url_root.rstrip("/") + f"/qr/{key}.png"
