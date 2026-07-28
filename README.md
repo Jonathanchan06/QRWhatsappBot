@@ -158,12 +158,12 @@ The merchant identity (FPS ID and merchant name, set at the top of `app.py`) is 
 
 ## 7. Google Sheets Logging Setup
 
-Every generated QR is logged to a Google Sheet with columns `Timestamp | ClassType | Name | Phone | Amount | BillNumber | QRPayload | Status`. Setup uses a Google **service account** (no interactive login needed on the server side):
+Every generated QR is logged to a Google Sheet as one row per request, in this fixed column order (headers can be freely relabeled — the code reads by column position, not by header text): `qr-gen-time | 班 | 學生姓名 | 電話 | 金額 | BillNumber | QRPayload | 狀態`. The `狀態` (Status) column uses `現用` (Active) / `已付` (Paid) / `取消` (Cancelled). Setup uses a Google **service account** (no interactive login needed on the server side):
 
 1. In the [Google Cloud Console](https://console.cloud.google.com/), create (or select) a project, then enable the **Google Sheets API** (APIs & Services → Library → search "Google Sheets API" → Enable).
 2. Go to **APIs & Services → Credentials → Create Credentials → Service Account**. Give it any name, no special roles needed.
 3. Open the new service account → **Keys** tab → **Add Key → Create new key → JSON**. This downloads a `.json` file — treat it like a password, never commit it to git.
-4. Create a Google Sheet with a header row: `Timestamp | ClassType | Name | Phone | Amount | BillNumber | QRPayload | Status`. Click **Share**, and share it with the service account's email address (found inside the JSON file, looks like `something@your-project.iam.gserviceaccount.com`) as **Editor**.
+4. Create a Google Sheet with a header row in the order above (labels can be anything you like, e.g. the Chinese ones shown). Click **Share**, and share it with the service account's email address (found inside the JSON file, looks like `something@your-project.iam.gserviceaccount.com`) as **Editor**.
 5. Set these environment variables (locally in a `.env`, or on your hosting platform's dashboard — never committed to the repo):
    - `GOOGLE_SERVICE_ACCOUNT_JSON` — the **entire contents** of the downloaded JSON file, pasted as one value.
    - `SHEET_ID` — the long ID in the sheet's URL: `docs.google.com/spreadsheets/d/`**`THIS_PART`**`/edit`.
